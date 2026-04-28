@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="pt-BR" x-data="app()" x-init="init()">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Orações Diárias</title>
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Theme / status bar -->
+<meta name="theme-color" content="#f59e0b">
+<meta name="msapplication-TileColor" content="#f59e0b">
+<meta name="msapplication-TileImage" content="icons/icon-192.png">
+
+<!-- iOS / Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Orações">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+
+<!-- SEO / Social -->
+<meta name="description" content="Orações personalizadas todo dia, direto no seu celular. Sua jornada espiritual, todo dia.">
+<meta name="application-name" content="Orações Diárias">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  [x-cloak]{display:none!important}
+  body{background:#f8f5f0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  .card{background:white;border-radius:20px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+  .btn-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:white;font-weight:600;border-radius:14px;padding:14px 24px;width:100%;border:none;cursor:pointer;font-size:15px;transition:opacity .2s}
+  .btn-gold:disabled{opacity:.5;cursor:not-allowed}
+  .btn-outline{background:transparent;color:#d97706;font-weight:600;border-radius:14px;padding:12px 24px;width:100%;border:2px solid #f59e0b;cursor:pointer;font-size:14px}
+  .input{width:100%;background:#f1ede6;border:none;border-radius:12px;padding:14px 16px;font-size:16px;outline:none;transition:box-shadow .2s}
+  .input:focus{box-shadow:0 0 0 3px rgba(245,158,11,.3)}
+  .tab-item{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:12px;font-weight:600;color:#9ca3af;transition:color .2s}
+  .tab-item.active{color:#d97706}
+  .tab-item.active .tab-icon{color:#d97706}
+  .tab-icon{display:block;width:22px;height:22px;margin:0 auto 4px}
+  .prayer-card{background:white;border-radius:20px;padding:20px;margin-bottom:12px;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+  .audio-bar{height:4px;background:#e5e7eb;border-radius:2px;cursor:pointer;position:relative}
+  .audio-fill{height:100%;background:linear-gradient(90deg,#f59e0b,#d97706);border-radius:2px;transition:width .1s}
+  .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .otp-input{width:48px;height:56px;text-align:center;font-size:24px;font-weight:700;background:#f1ede6;border:none;border-radius:12px;outline:none}
+  .otp-input:focus{box-shadow:0 0 0 3px rgba(245,158,11,.3)}
+  .cross{width:20px;height:20px;position:relative;display:inline-block}
+  .cross::before,.cross::after{content:'';position:absolute;background:#8b7355;border-radius:1px}
+  .cross::before{width:2px;height:100%;left:50%;top:0;transform:translateX(-50%)}
+  .cross::after{width:100%;height:2px;top:50%;left:0;transform:translateY(-50%)}
+  .video-thumb{aspect-ratio:16/9;background:#111;border-radius:14px;overflow:hidden;position:relative;cursor:pointer}
+  .video-thumb img{width:100%;height:100%;object-fit:cover}
+  .video-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}
+  /* PWA safe-area (iPhone notch / Dynamic Island) */
+  body{padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom)}
+  nav.fixed{padding-bottom: env(safe-area-inset-bottom)}
+  /* Instalar banner */
+  #pwa-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
+    background:linear-gradient(135deg,#f59e0b,#d97706);color:white;
+    padding:14px 20px;padding-bottom:calc(14px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 20px rgba(0,0,0,.15);animation:slideUp .3s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+</style>
+</head>
+<body x-cloak>
+
+<!-- ─── STEP 1: PHONE ──────────────────────────────────────── -->
+<div x-show="step==='phone'" class="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-amber-50 to-white">
+  <div class="w-full max-w-sm">
+    <div class="text-center mb-10">
+      <div class="w-20 h-20 bg-gradient-to-br from-amber-400 to-amber-600 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+        <div class="cross w-8 h-8"></div>
+      </div>
+      <h1 class="text-2xl font-bold text-slate-800">Orações Diárias</h1>
+      <p class="text-slate-500 mt-2 text-sm">Sua jornada espiritual, todo dia</p>
+    </div>
+    <div class="card">
+      <h2 class="font-semibold text-slate-800 mb-1">Entrar com WhatsApp</h2>
+      <p class="text-sm text-slate-500 mb-5">Enviaremos um código de 6 dígitos pelo WhatsApp</p>
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Número com DDD</label>
+        <div class="relative">
+          <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">🇧🇷 +55</span>
+          <input x-model="phone" type="tel" inputmode="numeric" maxlength="11" class="input pl-20" placeholder="(74) 99999-9999" @keydown.enter="sendOtp()" @input="phone=phone.replace(/\D/g,'')">
+        </div>
+      </div>
+      <div x-show="loginError" class="text-red-500 text-sm p-3 bg-red-50 rounded-xl mb-3" x-text="loginError"></div>
+      <button @click="sendOtp()" :disabled="loginLoading || phone.length < 10" class="btn-gold">
+        <span x-text="loginLoading ? 'Enviando...' : 'Receber código →'"></span>
+      </button>
+    </div>
+    <p class="text-center text-xs text-slate-400 mt-6">Ao continuar você aceita os <a href="#" class="underline">Termos de Uso</a></p>
+  </div>
+</div>
+
+<!-- ─── STEP 2: OTP ───────────────────────────────────────── -->
+<div x-show="step==='otp'" class="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-amber-50 to-white">
+  <div class="w-full max-w-sm">
+    <button @click="step='phone'" class="flex items-center gap-2 text-slate-500 text-sm mb-8">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Voltar
+    </button>
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      </div>
+      <h2 class="text-xl font-bold text-slate-800">Código enviado!</h2>
+      <p class="text-sm text-slate-500 mt-1">Digite o código de 6 dígitos enviado para<br><strong x-text="'+55 '+phone"></strong></p>
+    </div>
+    <div class="card">
+      <div class="flex gap-2 justify-center mb-5">
+        <template x-for="(_, i) in [0,1,2,3,4,5]" :key="i">
+          <input type="text" inputmode="numeric" maxlength="1" class="otp-input"
+            :id="'otp-'+i"
+            @input="otpInput($event, i)"
+            @keydown.backspace="otpBack($event, i)"
+            @paste.prevent="otpPaste($event)">
+        </template>
+      </div>
+      <div x-show="loginError" class="text-red-500 text-sm p-3 bg-red-50 rounded-xl mb-3" x-text="loginError"></div>
+      <button @click="verifyOtp()" :disabled="loginLoading || otpCode.length < 6" class="btn-gold">
+        <span x-text="loginLoading ? 'Verificando...' : 'Confirmar'"></span>
+      </button>
+      <button @click="sendOtp()" :disabled="resendTimer > 0" class="btn-outline mt-3">
+        <span x-text="resendTimer>0 ? 'Reenviar em '+resendTimer+'s' : 'Reenviar código'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MAIN APP ───────────────────────────────────────────── -->
+<div x-show="step==='app'" class="max-w-md mx-auto min-h-screen flex flex-col pb-24">
+
+  <!-- Header -->
+  <header class="bg-white px-5 py-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow">
+        <div class="cross w-5 h-5" style="--tw-cross-bg:white"></div>
+      </div>
+      <div>
+        <p class="font-semibold text-slate-800 text-sm" x-text="usuario?.nome ? 'Olá, '+usuario.nome.split(' ')[0]+'! 🙏' : 'Orações Diárias 🙏'"></p>
+        <p class="text-xs text-slate-400" x-text="planLabel()"></p>
+      </div>
+    </div>
+    <button @click="currentTab='perfil'" class="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center">
+      <svg class="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+    </button>
+  </header>
+
+  <!-- Page Content -->
+  <div class="flex-1 p-4">
+
+    <!-- ── FEED DE ORAÇÕES ──────────────────────────────────── -->
+    <div x-show="currentTab==='oracoes'">
+
+      <!-- ── Minhas Orações (últimas 3) ───────────────────────── -->
+      <div class="mb-4">
+        <h2 class="text-lg font-bold text-slate-800">Suas Orações</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Últimas orações recebidas</p>
+      </div>
+
+      <div>
+        <template x-for="or in oracoes.slice(0,3)" :key="or.id">
+          <div class="prayer-card">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <p class="text-xs font-semibold text-amber-600 uppercase tracking-wide" x-text="or.tema||or.necessidade||or.tipo||'Oração do Dia'"></p>
+                <p class="text-xs text-slate-400 mt-0.5" x-text="formatDateFull(or.enviado_em)"></p>
+              </div>
+              <button @click="toggleFavorito(or)" :class="or.favorito?'text-amber-500':'text-slate-200'" class="hover:text-amber-400 transition-colors ml-2 shrink-0">
+                <svg class="w-5 h-5" :fill="or.favorito?'currentColor':'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+              </button>
+            </div>
+            <!-- Texto: preview ou completo -->
+            <p class="text-sm text-slate-700 leading-relaxed" x-text="expandedOracao===or.id ? (or.conteudo||or.texto||or.oracao_texto||'') : truncate(or.conteudo||or.texto||or.oracao_texto||'', 130)"></p>
+            <!-- Link expandir/recolher -->
+            <button x-show="(or.conteudo||or.texto||or.oracao_texto||'').length > 130"
+                    @click="expandedOracao = expandedOracao===or.id ? null : or.id"
+                    class="mt-2 text-xs font-semibold text-amber-600 flex items-center gap-1">
+              <span x-text="expandedOracao===or.id ? 'Ver menos' : 'Ver oracao completa'"></span>
+            </button>
+            <!-- Audio player -->
+            <div x-show="or.audio_url" class="mt-3 bg-amber-50 rounded-xl p-3">
+              <div class="flex items-center gap-3">
+                <button @click="playAudio(or)" class="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                  <svg x-show="playingId!==or.id" class="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <svg x-show="playingId===or.id" class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <div class="flex-1">
+                  <div class="audio-bar" @click="seekAudio($event, or)">
+                    <div class="audio-fill" :style="{width: (playingId===or.id ? audioProgress : 0)+'%'}"></div>
+                  </div>
+                  <div class="flex justify-between mt-1">
+                    <span class="text-xs text-slate-400" x-text="playingId===or.id ? formatTime(audioCurrentTime) : '0:00'"></span>
+                    <span class="text-xs text-slate-400">🎵 Áudio</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="oracoes.length===0" class="text-center py-10 text-slate-400">
+          <svg class="w-10 h-10 mx-auto mb-3 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          <p class="text-sm">Sua primeira oração chegará amanhã às 6h 🙏</p>
+        </div>
+      </div>
+
+      <!-- ── Leituras do Dia ──────────────────────────────────── -->
+      <div x-show="liturgia.data || liturgiaLoading" class="mt-7">
+
+        <!-- Cabeçalho -->
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">📖 Leituras do Dia</h2>
+            <p class="text-xs text-slate-400 mt-0.5" x-text="liturgia.liturgia||liturgia.data||''"></p>
+          </div>
+          <span x-show="liturgia.cor" :style="corLiturgicaBadge(liturgia.cor)" class="text-xs font-semibold px-2.5 py-1 rounded-full" x-text="liturgia.cor||''"></span>
+        </div>
+
+        <!-- Loading spinner -->
+        <div x-show="liturgiaLoading && !liturgia.data" class="text-center py-6 text-slate-400">
+          <div class="animate-spin w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full mx-auto mb-2"></div>
+          <p class="text-xs">Carregando leituras...</p>
+        </div>
+
+        <!-- Tab Bar -->
+        <div x-show="liturgia.data" class="flex bg-slate-100 rounded-2xl p-1 mb-4 gap-1">
+          <button @click="liturgiaTab='primeira'"
+                  :class="liturgiaTab==='primeira' ? 'bg-white shadow text-slate-800' : 'text-slate-500'"
+                  class="flex-1 py-2 px-1 rounded-xl text-xs font-semibold transition-all">
+            1ª Leitura
+          </button>
+          <button @click="liturgiaTab='salmo'"
+                  :class="liturgiaTab==='salmo' ? 'bg-white shadow text-purple-700' : 'text-slate-500'"
+                  class="flex-1 py-2 px-1 rounded-xl text-xs font-semibold transition-all">
+            Salmo
+          </button>
+          <template x-if="liturgia.segundaLeitura && liturgia.segundaLeitura.texto">
+            <button @click="liturgiaTab='segunda'"
+                    :class="liturgiaTab==='segunda' ? 'bg-white shadow text-sky-700' : 'text-slate-500'"
+                    class="flex-1 py-2 px-1 rounded-xl text-xs font-semibold transition-all">
+              2&#170; Leitura
+            </button>
+          </template>
+          <button @click="liturgiaTab='evangelho'"
+                  :class="liturgiaTab==='evangelho' ? 'bg-white shadow text-green-700' : 'text-slate-500'"
+                  class="flex-1 py-2 px-1 rounded-xl text-xs font-semibold transition-all">
+            Evangelho
+          </button>
+        </div>
+
+        <!-- Conteúdo da aba ativa -->
+        <template x-if="liturgia.data && liturgiaTab==='primeira'">
+          <div class="prayer-card">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <span class="text-amber-700 text-xs font-bold">1</span>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-amber-700 uppercase tracking-wide">Primeira Leitura</p>
+                <p class="text-xs text-slate-500" x-text="(liturgia.primeiraLeitura||{}).referencia||''"></p>
+              </div>
+            </div>
+            <p class="text-sm text-slate-700 leading-relaxed" x-text="(liturgia.primeiraLeitura||{}).texto||''"></p>
+          </div>
+        </template>
+
+        <template x-if="liturgia.data && liturgiaTab==='salmo'">
+          <div class="prayer-card" style="background:linear-gradient(135deg,#fdf4ff,#faf5ff)">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                <span class="text-purple-700 text-xs font-bold">S</span>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-purple-700 uppercase tracking-wide">Salmo Responsorial</p>
+                <p class="text-xs text-slate-500" x-text="(liturgia.salmo||{}).referencia||''"></p>
+              </div>
+            </div>
+            <p class="text-sm text-purple-700 font-semibold italic leading-relaxed mb-3 p-3 bg-purple-50 rounded-xl" x-text="'Refrao: ' + ((liturgia.salmo||{}).refrao||'')"></p>
+            <p class="text-sm text-slate-700 leading-relaxed" x-text="(liturgia.salmo||{}).texto||(liturgia.salmo||{}).refrao||''"></p>
+          </div>
+        </template>
+
+        <template x-if="liturgia.data && liturgiaTab==='segunda'">
+          <div class="prayer-card">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-6 h-6 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+                <span class="text-sky-700 text-xs font-bold">2</span>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-sky-700 uppercase tracking-wide">Segunda Leitura</p>
+                <p class="text-xs text-slate-500" x-text="(liturgia.segundaLeitura||{}).referencia||''"></p>
+              </div>
+            </div>
+            <p class="text-sm text-slate-700 leading-relaxed" x-text="(liturgia.segundaLeitura||{}).texto||''"></p>
+          </div>
+        </template>
+
+        <template x-if="liturgia.data && liturgiaTab==='evangelho'">
+          <div class="prayer-card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7)">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-5 h-5 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+              <div>
+                <p class="text-xs font-bold text-green-700 uppercase tracking-wide">Evangelho</p>
+                <p class="text-xs text-slate-500" x-text="(liturgia.evangelho||{}).referencia||''"></p>
+              </div>
+            </div>
+            <p class="text-sm text-slate-700 leading-relaxed italic" x-text="(liturgia.evangelho||{}).texto||''"></p>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── REFLEXÃO (Plus) ──────────────────────────────────── -->
+    <div x-show="currentTab==='reflexao'">
+      <div x-show="usuario?.plano !== 'plus'" class="text-center py-16">
+        <div class="w-20 h-20 bg-purple-100 rounded-3xl flex items-center justify-center mx-auto mb-5">
+          <svg class="w-10 h-10 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800 mb-2">Disponível no Plano Plus</h2>
+        <p class="text-sm text-slate-500 mb-6 max-w-xs mx-auto">Reflexões do Evangelho, análises espirituais e áudio diário com a mensagem do dia.</p>
+        <button @click="currentTab='plano'" class="btn-gold max-w-xs mx-auto block">Fazer Upgrade → Plus</button>
+      </div>
+      <div x-show="usuario?.plano === 'plus'">
+        <div class="mb-5">
+          <h2 class="text-lg font-bold text-slate-800">📖 Reflexão do Dia</h2>
+          <p class="text-sm text-slate-500" x-text="new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})"></p>
+        </div>
+        <div class="card mb-4">
+          <p class="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-2">Evangelho de Hoje</p>
+          <p class="text-sm text-slate-600 leading-relaxed italic mb-4" x-text="reflexao.evangelhoTexto||'Carregando reflexão...'"></p>
+          <div x-show="reflexao.audioUrl" class="bg-purple-50 rounded-xl p-3">
+            <div class="flex items-center gap-3">
+              <button @click="playAudioUrl(reflexao.audioUrl)" class="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+              <div>
+                <p class="text-sm font-semibold text-slate-700">Reflexão em Áudio</p>
+                <p class="text-xs text-slate-400">Ouça a reflexão completa</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <p class="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-3">Pontos de Meditação</p>
+          <div class="space-y-3">
+            <template x-for="(p, i) in (reflexao.pontos||['Carregando...'])" :key="i">
+              <div class="flex gap-3">
+                <div class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <span class="text-purple-600 text-xs font-bold" x-text="i+1"></span>
+                </div>
+                <p class="text-sm text-slate-600 leading-relaxed" x-text="p"></p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VÍDEOS ───────────────────────────────────────────── -->
+    <div x-show="currentTab==='videos'">
+      <div class="mb-5">
+        <h2 class="text-lg font-bold text-slate-800">Vídeos Espirituais</h2>
+        <p class="text-sm text-slate-500">Selecionados especialmente para você</p>
+      </div>
+      <!-- Categoria Tabs -->
+      <div class="flex gap-2 mb-4">
+        <button @click="vidFilter='todos'" :class="vidFilter==='todos'?'bg-amber-500 text-white':'bg-white text-slate-600'" class="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm">Todos</button>
+        <button @click="vidFilter='oracao'" :class="vidFilter==='oracao'?'bg-amber-500 text-white':'bg-white text-slate-600'" class="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm">🙏 Orações</button>
+        <button @click="vidFilter='reflexao'" :class="vidFilter==='reflexao'?'bg-amber-500 text-white':'bg-white text-slate-600'" class="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm">📖 Reflexões</button>
+        <button @click="vidFilter='motivacao'" :class="vidFilter==='motivacao'?'bg-amber-500 text-white':'bg-white text-slate-600'" class="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm">✨ Motivação</button>
+      </div>
+      <div class="space-y-4">
+        <template x-for="v in videosFiltrados()" :key="v.id">
+          <div class="card p-3">
+            <div class="video-thumb mb-3" @click="openVideo(v)">
+              <img :src="'https://img.youtube.com/vi/'+extractYtId(v.url_youtube)+'/mqdefault.jpg'" alt="" class="w-full h-full object-cover">
+              <div class="video-play">
+                <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                  <svg class="w-5 h-5 text-slate-800 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+              </div>
+            </div>
+            <p class="font-semibold text-slate-800 text-sm" x-text="v.titulo"></p>
+            <p class="text-xs text-slate-400 mt-1 capitalize" x-text="v.categoria"></p>
+          </div>
+        </template>
+        <div x-show="videosFiltrados().length===0" class="text-center py-10 text-slate-400 text-sm">
+          Nenhum vídeo disponível
+        </div>
+      </div>
+      <!-- Modal Vídeo -->
+      <div x-show="activeVideo" class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" @click="activeVideo=null">
+        <div class="w-full max-w-sm" @click.stop>
+          <div class="aspect-video mb-3 rounded-2xl overflow-hidden">
+            <iframe x-show="activeVideo" :src="'https://www.youtube.com/embed/'+extractYtId(activeVideo?.url_youtube)+'?autoplay=1'" frameborder="0" allow="autoplay;encrypted-media" allowfullscreen class="w-full h-full"></iframe>
+          </div>
+          <button @click="activeVideo=null" class="btn-gold">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PLANO ────────────────────────────────────────────── -->
+    <div x-show="currentTab==='plano'">
+      <div class="mb-5">
+        <h2 class="text-lg font-bold text-slate-800">Sua Assinatura</h2>
+      </div>
+      <!-- Current plan card -->
+      <div class="card mb-4" :class="usuario?.plano==='plus'?'border-2 border-purple-300':usuario?.plano==='premium'?'border-2 border-amber-300':''">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <p class="text-sm text-slate-500">Plano atual</p>
+            <p class="text-xl font-bold" :class="usuario?.plano==='plus'?'text-purple-600':usuario?.plano==='premium'?'text-amber-600':'text-slate-600'" x-text="planLabel()"></p>
+          </div>
+          <div class="text-right" x-show="usuario?.plano!=='free'">
+            <p class="text-xs text-slate-400">Próxima cobrança</p>
+            <p class="font-semibold text-slate-700" x-text="proxCobranca()"></p>
+          </div>
+        </div>
+        <div class="space-y-2 text-sm">
+          <div class="flex items-center gap-2" :class="['premium','plus'].includes(usuario?.plano)?'text-slate-700':'text-slate-300'">
+            <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            Oração diária personalizada
+          </div>
+          <div class="flex items-center gap-2" :class="['premium','plus'].includes(usuario?.plano)?'text-slate-700':'text-slate-300'">
+            <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            Oração em áudio (TTS)
+          </div>
+          <div class="flex items-center gap-2" :class="usuario?.plano==='plus'?'text-slate-700':'text-slate-300'">
+            <svg class="w-4 h-4" :class="usuario?.plano==='plus'?'text-green-500':'text-slate-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            Reflexão do Evangelho diária
+          </div>
+          <div class="flex items-center gap-2" :class="usuario?.plano==='plus'?'text-slate-700':'text-slate-300'">
+            <svg class="w-4 h-4" :class="usuario?.plano==='plus'?'text-green-500':'text-slate-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            Jornadas espirituais (7/21/30d)
+          </div>
+        </div>
+      </div>
+      <!-- Upgrade options -->
+      <div x-show="usuario?.plano==='free' || usuario?.plano==='premium'">
+        <h3 class="font-semibold text-slate-700 mb-3" x-text="usuario?.plano==='free'?'Escolha seu plano':'Fazer Upgrade'"></h3>
+        <div class="space-y-3">
+          <div x-show="usuario?.plano==='free'" @click="assinar('premium')" class="card border-2 border-amber-200 cursor-pointer active:opacity-70">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-bold text-amber-600">⭐ Premium</p>
+                <p class="text-xs text-slate-500 mt-0.5">Oração diária + Áudio</p>
+              </div>
+              <div class="text-right">
+                <p class="text-xl font-bold text-amber-600">R$ 9,90</p>
+                <p class="text-xs text-slate-400">/mês</p>
+              </div>
+            </div>
+          </div>
+          <div @click="assinar('plus')" class="card border-2 border-purple-200 cursor-pointer active:opacity-70">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-bold text-purple-600">💎 Plus</p>
+                <p class="text-xs text-slate-500 mt-0.5">Tudo do Premium + Reflexões</p>
+              </div>
+              <div class="text-right">
+                <p class="text-xl font-bold text-purple-600">R$ 29,90</p>
+                <p class="text-xs text-slate-400">/mês</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Cancel -->
+      <div x-show="usuario?.plano!=='free'" class="mt-6 text-center">
+        <button @click="cancelarPlano()" class="text-sm text-slate-400 underline">Cancelar assinatura</button>
+      </div>
+    </div>
+
+    <!-- ── PERFIL ────────────────────────────────────────────── -->
+    <div x-show="currentTab==='perfil'">
+      <div class="mb-5">
+        <h2 class="text-lg font-bold text-slate-800">Meu Perfil</h2>
+      </div>
+      <div class="card mb-4">
+        <div class="flex items-center gap-4 mb-5">
+          <div class="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center">
+            <span class="text-white text-2xl font-bold" x-text="(usuario?.nome||'U')[0].toUpperCase()"></span>
+          </div>
+          <div>
+            <p class="font-bold text-slate-800 text-lg" x-text="usuario?.nome||'Usuário'"></p>
+            <p class="text-sm text-slate-500" x-text="'+55 '+usuario?.whatsapp"></p>
+            <span :class="usuario?.plano==='plus'?'bg-purple-100 text-purple-700':usuario?.plano==='premium'?'bg-amber-100 text-amber-700':'bg-slate-100 text-slate-600'" class="badge text-xs mt-1" x-text="planLabel()"></span>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 p-4 bg-amber-50 rounded-xl">
+          <div class="text-center">
+            <p class="text-2xl font-bold text-amber-600" x-text="usuario?.dias_consecutivos||0"></p>
+            <p class="text-xs text-slate-500">Dias seguidos</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-amber-600" x-text="oracoes.length"></p>
+            <p class="text-xs text-slate-500">Orações</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-amber-600" x-text="oracoes.filter(o=>o.favorito).length"></p>
+            <p class="text-xs text-slate-500">Favoritas</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold text-slate-700 mb-4">Editar Dados</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Nome Completo</label>
+            <input x-model="perfilForm.nome" class="input" placeholder="Seu nome">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Cidade / Estado</label>
+            <input x-model="perfilForm.cidade" class="input" placeholder="Ex: Salvador, BA">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Necessidade Espiritual</label>
+            <select x-model="perfilForm.necessidade" class="input">
+              <option value="">Não definida</option>
+              <option value="ansiedade">Ansiedade / Paz interior</option>
+              <option value="familia">Família / Relacionamentos</option>
+              <option value="financeiro">Financeiro / Trabalho</option>
+              <option value="fe">Fé / Vida espiritual</option>
+              <option value="saude">Saúde</option>
+              <option value="gratidao">Gratidão</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Preferência Espiritual</label>
+            <select x-model="perfilForm.preferencia_espiritual" class="input">
+              <option value="">Não definida</option>
+              <option value="catolico">Católico</option>
+              <option value="evangelico">Evangélico</option>
+              <option value="ecumenico">Ecumênico</option>
+            </select>
+          </div>
+          <button @click="salvarPerfil()" class="btn-gold">Salvar Alterações</button>
+        </div>
+      </div>
+      <div class="mt-4">
+        <button @click="doLogout()" class="btn-outline" style="color:#ef4444;border-color:#ef4444">Sair da conta</button>
+      </div>
+    </div>
+
+  </div><!-- /flex-1 p-4 -->
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100 flex z-20" style="box-shadow:0 -4px 20px rgba(0,0,0,.06)">
+    <template x-for="tab in tabs" :key="tab.id">
+      <button @click="currentTab=tab.id" :class="['tab-item', currentTab===tab.id?'active':'']">
+        <span class="tab-icon" x-html="tab.icon"></span>
+        <span x-text="tab.label"></span>
+      </button>
+    </template>
+  </nav>
+</div><!-- /main app -->
+
+<!-- PWA Install Banner -->
+<div id="pwa-banner">
+  <div class="flex items-center justify-between gap-3 max-w-md mx-auto">
+    <div class="flex items-center gap-3">
+      <img src="icons/icon-192.png" class="w-10 h-10 rounded-xl" alt="ícone">
+      <div>
+        <p class="font-bold text-sm">Instalar Orações Diárias</p>
+        <p class="text-xs opacity-80">Adicionar à tela inicial para acesso rápido</p>
+      </div>
+    </div>
+    <div class="flex gap-2 shrink-0">
+      <button onclick="dismissPWA()" class="text-xs opacity-70 px-3 py-1.5 rounded-lg border border-white/40">Não</button>
+      <button onclick="installPWA()" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-white text-amber-600">Instalar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div x-show="toast.show" x-transition class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 max-w-xs w-full px-4">
+  <div :class="toast.type==='success'?'bg-green-500':'bg-red-500'" class="text-white px-5 py-3 rounded-2xl shadow-lg text-center text-sm font-medium" x-text="toast.msg"></div>
+</div>
+
+<!-- Audio element -->
+<audio id="audioEl" x-ref="audioEl" @timeupdate="updateAudioProgress()" @ended="playingId=null"></audio>
+
+<script>
+const SUPABASE_URL = 'https://supabase.apicesystem.shop';
+const SUPABASE_KEY = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc3NjEwNzg4MCwiZXhwIjo0OTMxNzgxNDgwLCJyb2xlIjoic2VydmljZV9yb2xlIn0.nJbj6erTeo_5On0_rY_AIM8Tuf0RIikbNQ_XYqAQdF0'; // service_role — acesso total
+const N8N_OTP_URL  = 'https://n8n.apicesystem.shop/webhook/otp-login';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function app(){
+  return {
+    step: 'phone',
+    phone: '',
+    otpCode: '',
+    loginError: '',
+    loginLoading: false,
+    resendTimer: 0,
+    currentTab: 'oracoes',
+    usuario: null,
+    oracoes: [],
+    orFilter: 'todas',
+    videos: [],
+    vidFilter: 'todos',
+    activeVideo: null,
+    reflexao: { evangelhoTexto:'', audioUrl:'', pontos:[] },
+    liturgia: {},
+    liturgiaLoading: false,
+    liturgiaTab: 'primeira',
+    expandedOracao: null,
+    playingId: null,
+    audioProgress: 0,
+    audioCurrentTime: 0,
+    perfilForm: {},
+    toast: { show:false, msg:'', type:'success' },
+    tabs: [
+      { id:'oracoes', label:'Orações', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>' },
+      { id:'reflexao', label:'Reflexão', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>' },
+      { id:'videos', label:'Vídeos', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+      { id:'plano', label:'Plano', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+      { id:'perfil', label:'Perfil', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>' },
+    ],
+
+    async init(){
+      // Check for existing session via localStorage
+      const saved = localStorage.getItem('od_user');
+      if(saved){
+        try {
+          this.usuario = JSON.parse(saved);
+          this.step='app';
+          await this.loadUserData();
+        } catch(e){ localStorage.removeItem('od_user'); }
+      }
+    },
+
+    // ── OTP AUTH ─────────────────────────────────────────────
+    // Normaliza o número BR: aceita 5574999980456 e 557499980456
+    normalizePhone(raw){
+      const p = '55' + raw.replace(/\D/g,'');
+      return p; // guarda no formato digitado; verifyOtp trata ambos
+    },
+
+    async sendOtp(){
+      this.loginLoading=true; this.loginError='';
+      try {
+        const code = String(Math.floor(100000+Math.random()*900000));
+        const expires = new Date(Date.now()+10*60*1000).toISOString();
+        const phone = this.normalizePhone(this.phone);
+        const { error } = await sb.from('otp_codes').insert({ whatsapp: phone, codigo: code, expira_em: expires });
+        if(error) throw new Error(error.message);
+        // Enviar também para o formato legado se necessário (Evolution/WF2 usa 10 dígitos)
+        const wa = phone.length===13 ? phone.slice(0,4)+phone.slice(5) : phone;
+        await fetch(N8N_OTP_URL, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ whatsapp: wa, codigo: code })
+        });
+        this.step='otp';
+        this.startResendTimer();
+      } catch(e){
+        this.loginError = 'Erro ao enviar código: ' + e.message;
+      }
+      this.loginLoading=false;
+    },
+
+    otpInput(e, i){
+      const v = e.target.value.replace(/\D/g,'');
+      e.target.value = v;
+      if(v && i<5) document.getElementById('otp-'+(i+1))?.focus();
+      this.otpCode = Array.from({length:6},(_, j)=>document.getElementById('otp-'+j)?.value||'').join('');
+    },
+
+    otpBack(e, i){
+      if(!e.target.value && i>0) document.getElementById('otp-'+(i-1))?.focus();
+    },
+
+    otpPaste(e){
+      const text = (e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);
+      text.split('').forEach((c,i)=>{ const el=document.getElementById('otp-'+i); if(el) el.value=c; });
+      this.otpCode = text;
+      document.getElementById('otp-'+(text.length-1))?.focus();
+    },
+
+    async verifyOtp(){
+      this.loginLoading=true; this.loginError='';
+      const phone = '55'+this.phone;
+      // Normalizar: BR tem 2 formatos — 5574999980456 (novo) e 557499980456 (legado s/ 9 extra)
+      // Tentar buscar OTP com ambos os formatos
+      const phoneAlt = phone.length===13 ? phone.slice(0,4)+phone.slice(5) : null;
+      const orFilter = phoneAlt ? `whatsapp.eq.${phone},whatsapp.eq.${phoneAlt}` : `whatsapp.eq.${phone}`;
+      const { data } = await sb.from('otp_codes')
+        .select('*')
+        .or(orFilter)
+        .eq('codigo', this.otpCode)
+        .eq('usado', false)
+        .gt('expira_em', new Date().toISOString())
+        .order('criado_em',{ascending:false})
+        .limit(1);
+      if(!data||data.length===0){
+        this.loginError='Código inválido ou expirado. Verifique e tente novamente.';
+        this.loginLoading=false; return;
+      }
+      // Mark as used
+      await sb.from('otp_codes').update({ usado:true }).eq('id', data[0].id);
+      // Usar o número exato que está no banco (do registro OTP) ou tentar ambos
+      const phoneDb = data[0].whatsapp; // formato como foi salvo no sendOtp
+      let us = null;
+      const { data: u1 } = await sb.from('usuarios').select('*').eq('whatsapp', phone).maybeSingle();
+      if(u1) us = u1;
+      else if(phoneAlt){
+        const { data: u2 } = await sb.from('usuarios').select('*').eq('whatsapp', phoneAlt).maybeSingle();
+        if(u2) us = u2;
+      }
+      if(!us){
+        this.loginError='Número não encontrado. Verifique sua assinatura no WhatsApp.';
+        this.loginLoading=false; return;
+      }
+      this.usuario = us;
+      localStorage.setItem('od_user', JSON.stringify(us));
+      this.step='app';
+      this.loginLoading=false;
+      await this.loadUserData();
+    },
+
+    startResendTimer(){
+      this.resendTimer=60;
+      const t = setInterval(()=>{ if(--this.resendTimer<=0) clearInterval(t); }, 1000);
+    },
+
+    // ── DATA ─────────────────────────────────────────────────
+    async loadUserData(){
+      // Reload fresh user data
+      const { data: u } = await sb.from('usuarios').select('*').eq('id', this.usuario.id).single();
+      if(u){ this.usuario=u; localStorage.setItem('od_user',JSON.stringify(u)); }
+      this.perfilForm = { nome: this.usuario?.nome||'', cidade: this.usuario?.cidade||'', necessidade: this.usuario?.necessidade||'', preferencia_espiritual: this.usuario?.preferencia_espiritual||'' };
+      await this.loadOracoes();
+      await this.loadVideos();
+      this.loadLiturgia();
+      if(this.usuario?.plano==='plus') this.loadReflexao();
+    },
+
+    async loadOracoes(){
+      const { data } = await sb.from('oracoes_log')
+        .select('*')
+        .eq('usuario_id', this.usuario.id)
+        .order('enviado_em', {ascending:false})
+        .limit(3);
+      this.oracoes = data||[];
+    },
+
+    async loadVideos(){
+      const { data } = await sb.from('videos').select('*').eq('ativo', true).order('ordem');
+      this.videos = data||[];
+    },
+
+    async loadReflexao(){
+      // Could fetch from a reflexoes table; for now use static demo
+      this.reflexao = {
+        evangelhoTexto: '"Naquele tempo, Jesus disse aos seus discípulos: Eu sou o caminho, a verdade e a vida. Ninguém vai ao Pai senão por mim." — João 14,6',
+        audioUrl: null,
+        pontos: [
+          'Jesus se apresenta como o único caminho para o Pai — não apenas um guia, mas a própria estrada.',
+          'A verdade que liberta não é apenas intelectual, mas é uma Pessoa viva com quem nos relacionamos.',
+          'A vida que Jesus oferece não é apenas existência biológica, mas plenitude e eternidade.'
+        ]
+      };
+    },
+
+    async loadLiturgia(){
+      this.liturgiaLoading = true;
+      try {
+        const r = await fetch('https://liturgia.up.railway.app/', { cache: 'no-cache' });
+        if(!r.ok) throw new Error('status '+r.status);
+        const d = await r.json();
+        // Usar Object.assign para manter reatividade do Alpine v3
+        Object.assign(this.liturgia, {
+          data:            d.data            || d.date          || '',
+          liturgia:        d.liturgia        || d.nome          || '',
+          cor:             d.cor             || d.color         || '',
+          primeiraLeitura: d.primeiraLeitura || d.primeira_leitura || null,
+          salmo:           d.salmo           || d.psalm         || null,
+          segundaLeitura:  d.segundaLeitura  || d.segunda_leitura  || null,
+          evangelho:       d.evangelho       || d.gospel        || null,
+        });
+      } catch(e){
+        console.warn('Liturgia nao carregada:', e.message);
+      }
+      this.liturgiaLoading = false;
+    },
+
+    oracoesFiltradas(){
+      return this.oracoes.filter(o=>{
+        if(this.orFilter==='favoritas') return o.favorito;
+        if(this.orFilter==='todas') return true;
+        return (o.tema||o.necessidade||'') === this.orFilter;
+      });
+    },
+
+    videosFiltrados(){
+      if(this.vidFilter==='todos') return this.videos;
+      return this.videos.filter(v=>v.categoria===this.vidFilter);
+    },
+
+    extractYtId(url){
+      if(!url) return '';
+      const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+      return m?m[1]:'';
+    },
+
+    openVideo(v){ this.activeVideo=v; },
+
+    // ── AUDIO ─────────────────────────────────────────────────
+    playAudio(or){
+      const el = document.getElementById('audioEl');
+      if(this.playingId===or.id){ el.pause(); this.playingId=null; return; }
+      el.src = or.audio_url;
+      el.play();
+      this.playingId=or.id;
+    },
+
+    playAudioUrl(url){
+      const el = document.getElementById('audioEl');
+      el.src=url; el.play();
+    },
+
+    updateAudioProgress(){
+      const el = document.getElementById('audioEl');
+      if(!el.duration) return;
+      this.audioProgress = (el.currentTime/el.duration)*100;
+      this.audioCurrentTime = el.currentTime;
+    },
+
+    seekAudio(e, or){
+      if(this.playingId!==or.id) return;
+      const el = document.getElementById('audioEl');
+      const rect = e.currentTarget.getBoundingClientRect();
+      el.currentTime = ((e.clientX-rect.left)/rect.width) * el.duration;
+    },
+
+    formatTime(s){ return Math.floor(s/60)+':'+(Math.floor(s%60)).toString().padStart(2,'0'); },
+
+    async toggleFavorito(or){
+      const novoValor = !or.favorito;
+      const { error } = await sb.from('oracoes_log').update({ favorito: novoValor }).eq('id', or.id);
+      if(!error){
+        or.favorito = novoValor;
+        this.showToast(novoValor ? 'Adicionada aos favoritos ⭐' : 'Removida dos favoritos');
+      }
+      // Se coluna favorito não existir, ignora silenciosamente
+    },
+
+    // ── PERFIL ────────────────────────────────────────────────
+    async salvarPerfil(){
+      const { error } = await sb.from('usuarios').update(this.perfilForm).eq('id', this.usuario.id);
+      if(error) this.showToast('Erro ao salvar','error');
+      else {
+        Object.assign(this.usuario, this.perfilForm);
+        localStorage.setItem('od_user',JSON.stringify(this.usuario));
+        this.showToast('Perfil atualizado! 🙏');
+      }
+    },
+
+    // ── PLANO ─────────────────────────────────────────────────
+    assinar(plano){
+      const precos = { premium: 9.90, plus: 29.90 };
+      if(!confirm(`Assinar plano ${plano} por R$ ${precos[plano].toFixed(2)}/mês?\n\nVocê será redirecionado para o pagamento seguro.`)) return;
+      window.open(`https://n8n.apicesystem.shop/webhook/criar-assinatura?plano=${plano}&wa=${this.usuario.whatsapp}&nome=${encodeURIComponent(this.usuario.nome||'')}`, '_blank');
+    },
+
+    cancelarPlano(){
+      if(!confirm('Tem certeza que deseja cancelar sua assinatura? Você continuará tendo acesso até o fim do período pago.')) return;
+      fetch('https://n8n.apicesystem.shop/webhook/cancelar-assinatura', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ usuario_id: this.usuario.id, whatsapp: this.usuario.whatsapp })
+      }).then(()=>this.showToast('Cancelamento solicitado. Você receberá confirmação no WhatsApp.'));
+    },
+
+    planLabel(){
+      const p = this.usuario?.plano;
+      if(p==='premium') return '⭐ Plano Premium';
+      if(p==='plus') return '💎 Plano Plus';
+      return '🆓 Plano Gratuito';
+    },
+
+    proxCobranca(){
+      if(!this.usuario?.criado_em) return '—';
+      const d = new Date(this.usuario.criado_em);
+      d.setMonth(d.getMonth()+1);
+      return d.toLocaleDateString('pt-BR',{day:'numeric',month:'long'});
+    },
+
+    // ── LOGOUT ───────────────────────────────────────────────
+    doLogout(){
+      localStorage.removeItem('od_user');
+      this.usuario=null;
+      this.step='phone';
+      this.phone='';
+      this.otpCode='';
+    },
+
+    // ── HELPERS ──────────────────────────────────────────────
+    formatDateFull(d){
+      if(!d) return '';
+      return new Date(d).toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'long'});
+    },
+
+    truncate(text, n){
+      if(!text) return '';
+      return text.length <= n ? text : text.slice(0, n).trimEnd() + '…';
+    },
+
+    corLiturgicaBadge(cor){
+      const map = {
+        'Branco':    'background:#f1f5f9;color:#475569',
+        'Verde':     'background:#dcfce7;color:#15803d',
+        'Roxo':      'background:#f3e8ff;color:#7e22ce',
+        'Vermelho':  'background:#fee2e2;color:#b91c1c',
+        'Rosa':      'background:#fce7f3;color:#be185d',
+        'Dourado':   'background:#fef9c3;color:#a16207',
+      };
+      return map[cor] || 'background:#f1f5f9;color:#64748b';
+    },
+
+    showToast(msg, type='success'){
+      this.toast={show:true,msg,type};
+      setTimeout(()=>this.toast.show=false, 3000);
+    },
+  };
+}
+</script>
+
+<!-- ─── PWA: Service Worker + Install Prompt ──────────────────── -->
+<script>
+// ── Service Worker ───────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => {
+        console.log('[SW] registrado, scope:', reg.scope);
+        // Detectar update disponível
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              // Notificar usuário que há update (só recarrega se quiser)
+              if (confirm('Nova versão disponível! Recarregar para atualizar?')) {
+                newSW.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[SW] erro:', err));
+  });
+}
+
+// ── Install Prompt ───────────────────────────────────────────────
+let deferredPrompt = null;
+const banner = document.getElementById('pwa-banner');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Mostrar só se não foi dispensado antes
+  if (!localStorage.getItem('pwa_dismissed')) {
+    setTimeout(() => { if (banner) banner.style.display = 'block'; }, 3000);
+  }
+});
+
+function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choice) => {
+    if (banner) banner.style.display = 'none';
+    deferredPrompt = null;
+    if (choice.outcome === 'accepted') {
+      console.log('[PWA] instalado pelo usuário');
+    }
+  });
+}
+
+function dismissPWA() {
+  if (banner) banner.style.display = 'none';
+  localStorage.setItem('pwa_dismissed', '1');
+}
+
+// Esconder banner se já foi instalado
+window.addEventListener('appinstalled', () => {
+  if (banner) banner.style.display = 'none';
+  deferredPrompt = null;
+  localStorage.removeItem('pwa_dismissed');
+});
+</script>
+</body>
+</html>
