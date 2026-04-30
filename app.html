@@ -531,15 +531,6 @@
               <option value="gratidao">Gratidão</option>
             </select>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Preferência Espiritual</label>
-            <select x-model="perfilForm.preferencia_espiritual" class="input">
-              <option value="">Não definida</option>
-              <option value="catolico">Católico</option>
-              <option value="evangelico">Evangélico</option>
-              <option value="ecumenico">Ecumênico</option>
-            </select>
-          </div>
           <button @click="salvarPerfil()" class="btn-gold">Salvar Alterações</button>
         </div>
       </div>
@@ -736,7 +727,7 @@ function app(){
       // Reload fresh user data
       const { data: u } = await sb.from('usuarios').select('*').eq('id', this.usuario.id).single();
       if(u){ this.usuario=u; localStorage.setItem('od_user',JSON.stringify(u)); }
-      this.perfilForm = { nome: this.usuario?.nome||'', cidade: this.usuario?.cidade||'', necessidade: this.usuario?.necessidade||'', preferencia_espiritual: this.usuario?.preferencia_espiritual||'' };
+      this.perfilForm = { nome: this.usuario?.nome||'', cidade: this.usuario?.cidade||'', necessidade: this.usuario?.necessidade||'' };
       await this.loadOracoes();
       await this.loadVideos();
       this.loadLiturgia();
