@@ -158,6 +158,82 @@
     <!-- ── FEED DE ORAÇÕES ──────────────────────────────────── -->
     <div x-show="currentTab==='oracoes'">
 
+      <!-- ── PAYWALL: trial expirado ───────────────────────────── -->
+      <template x-if="trialExpirado()">
+        <div class="flex flex-col items-center justify-center text-center py-8 px-2">
+          <!-- Ícone bloqueado -->
+          <div class="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg"
+               style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+            <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+
+          <h2 class="text-xl font-bold text-slate-800 mb-2">Seus 7 dias gratuitos<br>chegaram ao fim 🙏</h2>
+          <p class="text-sm text-slate-500 mb-6 max-w-xs leading-relaxed">
+            Suas orações diárias estão esperando por você. Escolha um plano para continuar recebendo todo dia às 6h.
+          </p>
+
+          <!-- Cards de plano compactos -->
+          <div class="w-full max-w-sm space-y-3 text-left">
+
+            <!-- Básico -->
+            <div @click="assinar('basico')" class="card border-2 border-slate-200 cursor-pointer active:opacity-70"
+                 :class="checkoutLoading==='basico'?'opacity-60 pointer-events-none':''">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-slate-700">📖 Básico</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Oração diária em texto</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-lg font-bold text-slate-700" x-text="checkoutLoading==='basico'?'...' : 'R$ 9,90'"></p>
+                  <p class="text-xs text-slate-400">/mês</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Premium -->
+            <div @click="assinar('premium')" class="card border-2 border-amber-300 cursor-pointer active:opacity-70"
+                 style="background:linear-gradient(135deg,#fffbeb,#fff)"
+                 :class="checkoutLoading==='premium'?'opacity-60 pointer-events-none':''">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-amber-600">⭐ Premium
+                    <span class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full ml-1">Popular</span>
+                  </p>
+                  <p class="text-xs text-slate-500 mt-0.5">Oração + Áudio do padre</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-lg font-bold text-amber-600" x-text="checkoutLoading==='premium'?'...' : 'R$ 19,90'"></p>
+                  <p class="text-xs text-slate-400">/mês</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Plus -->
+            <div @click="assinar('plus')" class="card border-2 border-purple-200 cursor-pointer active:opacity-70"
+                 :class="checkoutLoading==='plus'?'opacity-60 pointer-events-none':''">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-purple-600">💎 Plus</p>
+                  <p class="text-xs text-slate-500 mt-0.5">Tudo + Reflexão do Evangelho</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-lg font-bold text-purple-600" x-text="checkoutLoading==='plus'?'...' : 'R$ 29,90'"></p>
+                  <p class="text-xs text-slate-400">/mês</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-400 mt-5">🔒 Pagamento seguro via Mercado Pago • Cancele quando quiser</p>
+        </div>
+      </template>
+
+      <!-- Conteúdo normal — só mostra se trial ativo ou plano pago -->
+      <template x-if="!trialExpirado()">
+        <div>
+
       <!-- ── Minhas Orações (últimas 3) ───────────────────────── -->
       <div class="mb-4">
         <h2 class="text-lg font-bold text-slate-800">Suas Orações</h2>
@@ -314,6 +390,9 @@
           </div>
         </template>
       </div>
+
+        </div><!-- /template !trialExpirado content -->
+      </template><!-- /x-if !trialExpirado -->
     </div>
 
     <!-- ── REFLEXÃO (Plus) ──────────────────────────────────── -->
@@ -442,29 +521,44 @@
         </div>
       </div>
       <!-- Upgrade options -->
-      <div x-show="usuario?.plano==='free' || usuario?.plano==='premium'">
-        <h3 class="font-semibold text-slate-700 mb-3" x-text="usuario?.plano==='free'?'Escolha seu plano':'Fazer Upgrade'"></h3>
+      <div x-show="usuario?.plano==='free' || usuario?.plano==='gratuito' || usuario?.plano==='premium'">
+        <h3 class="font-semibold text-slate-700 mb-3" x-text="(usuario?.plano==='free'||usuario?.plano==='gratuito')?'Escolha seu plano':'Fazer Upgrade'"></h3>
         <div class="space-y-3">
-          <div x-show="usuario?.plano==='free'" @click="assinar('premium')" class="card border-2 border-amber-200 cursor-pointer active:opacity-70">
+          <!-- Básico — só para free -->
+          <div x-show="usuario?.plano==='free' || usuario?.plano==='gratuito'" @click="assinar('basico')" class="card border-2 border-slate-200 cursor-pointer active:opacity-70" :class="checkoutLoading==='basico'?'opacity-60 pointer-events-none':''">
             <div class="flex items-center justify-between">
               <div>
-                <p class="font-bold text-amber-600">⭐ Premium</p>
-                <p class="text-xs text-slate-500 mt-0.5">Oração diária + Áudio</p>
+                <p class="font-bold text-slate-600">📖 Básico</p>
+                <p class="text-xs text-slate-500 mt-0.5">Oração diária em texto</p>
               </div>
               <div class="text-right">
-                <p class="text-xl font-bold text-amber-600">R$ 9,90</p>
+                <p class="text-xl font-bold text-slate-600" x-text="checkoutLoading==='basico'?'...' : 'R$ 9,90'"></p>
                 <p class="text-xs text-slate-400">/mês</p>
               </div>
             </div>
           </div>
-          <div @click="assinar('plus')" class="card border-2 border-purple-200 cursor-pointer active:opacity-70">
+          <!-- Premium — para free e gratuito -->
+          <div x-show="usuario?.plano==='free' || usuario?.plano==='gratuito'" @click="assinar('premium')" class="card border-2 border-amber-200 cursor-pointer active:opacity-70" :class="checkoutLoading==='premium'?'opacity-60 pointer-events-none':''">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="font-bold text-amber-600">⭐ Premium <span class="text-xs bg-amber-100 px-1.5 py-0.5 rounded-full ml-1">Popular</span></p>
+                <p class="text-xs text-slate-500 mt-0.5">Oração diária + Áudio do padre</p>
+              </div>
+              <div class="text-right">
+                <p class="text-xl font-bold text-amber-600" x-text="checkoutLoading==='premium'?'...' : 'R$ 19,90'"></p>
+                <p class="text-xs text-slate-400">/mês</p>
+              </div>
+            </div>
+          </div>
+          <!-- Plus — para todos -->
+          <div @click="assinar('plus')" class="card border-2 border-purple-200 cursor-pointer active:opacity-70" :class="checkoutLoading==='plus'?'opacity-60 pointer-events-none':''">
             <div class="flex items-center justify-between">
               <div>
                 <p class="font-bold text-purple-600">💎 Plus</p>
-                <p class="text-xs text-slate-500 mt-0.5">Tudo do Premium + Reflexões</p>
+                <p class="text-xs text-slate-500 mt-0.5">Tudo do Premium + Reflexões do Evangelho</p>
               </div>
               <div class="text-right">
-                <p class="text-xl font-bold text-purple-600">R$ 29,90</p>
+                <p class="text-xl font-bold text-purple-600" x-text="checkoutLoading==='plus'?'...' : 'R$ 29,90'"></p>
                 <p class="text-xs text-slate-400">/mês</p>
               </div>
             </div>
@@ -544,8 +638,14 @@
   <!-- Bottom Navigation -->
   <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-100 flex z-20" style="box-shadow:0 -4px 20px rgba(0,0,0,.06)">
     <template x-for="tab in tabs" :key="tab.id">
-      <button @click="currentTab=tab.id" :class="['tab-item', currentTab===tab.id?'active':'']">
-        <span class="tab-icon" x-html="tab.icon"></span>
+      <button @click="currentTab=tab.id"
+        :class="['tab-item', currentTab===tab.id?'active':'', (tab.id==='plano' && trialExpirado() && currentTab!=='plano')?'text-amber-500':'']">
+        <!-- Badge de alerta no ícone de Plano quando trial expirado -->
+        <span class="relative inline-block">
+          <span class="tab-icon" x-html="tab.icon"></span>
+          <span x-show="tab.id==='plano' && trialExpirado()"
+                class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
+        </span>
         <span x-text="tab.label"></span>
       </button>
     </template>
@@ -591,6 +691,7 @@ function app(){
     otpCode: '',
     loginError: '',
     loginLoading: false,
+    checkoutLoading: null,
     resendTimer: 0,
     currentTab: 'oracoes',
     usuario: null,
@@ -856,10 +957,32 @@ function app(){
     },
 
     // ── PLANO ─────────────────────────────────────────────────
-    assinar(plano){
-      const precos = { premium: 9.90, plus: 29.90 };
-      if(!confirm(`Assinar plano ${plano} por R$ ${precos[plano].toFixed(2)}/mês?\n\nVocê será redirecionado para o pagamento seguro.`)) return;
-      window.open(`https://n8n.apicesystem.shop/webhook/criar-assinatura?plano=${plano}&wa=${this.usuario.whatsapp}&nome=${encodeURIComponent(this.usuario.nome||'')}`, '_blank');
+    async assinar(plano){
+      if(this.checkoutLoading) return;
+      const precos = { basico: 9.90, premium: 19.90, plus: 29.90 };
+      this.checkoutLoading = plano;
+      this.showToast('Gerando link de pagamento...');
+      try {
+        const res = await fetch('https://n8n.apicesystem.shop/webhook/criar-checkout', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            plano,
+            whatsapp: this.usuario.whatsapp,
+            nome: this.usuario.nome || ''
+          })
+        });
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        const url = data.checkout_url || data.init_point;
+        if(!url) throw new Error('Sem URL');
+        window.location.href = url;
+      } catch(e) {
+        this.showToast('Erro ao gerar pagamento. Tente novamente.');
+        console.error(e);
+      } finally {
+        this.checkoutLoading = null;
+      }
     },
 
     cancelarPlano(){
@@ -870,10 +993,20 @@ function app(){
       }).then(()=>this.showToast('Cancelamento solicitado. Você receberá confirmação no WhatsApp.'));
     },
 
+    trialExpirado(){
+      const p = this.usuario?.plano;
+      const isFree = (p === 'free' || p === 'gratuito' || !p);
+      if(!isFree) return false; // pago → nunca bloqueia
+      const trialEnd = this.usuario?.trial_end;
+      if(!trialEnd) return false; // sem data → não bloqueia (precaução)
+      return new Date(trialEnd) < new Date();
+    },
+
     planLabel(){
       const p = this.usuario?.plano;
       if(p==='premium') return '⭐ Plano Premium';
       if(p==='plus') return '💎 Plano Plus';
+      if(this.trialExpirado()) return '🔒 Trial Expirado';
       return '🆓 Plano Gratuito';
     },
 
