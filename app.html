@@ -169,10 +169,8 @@
             </svg>
           </div>
 
-          <h2 class="text-xl font-bold text-slate-800 mb-2">Seus 7 dias gratuitos<br>chegaram ao fim 🙏</h2>
-          <p class="text-sm text-slate-500 mb-6 max-w-xs leading-relaxed">
-            Suas orações diárias estão esperando por você. Escolha um plano para continuar recebendo todo dia às 6h.
-          </p>
+          <h2 class="text-xl font-bold text-slate-800 mb-2" x-text="paywallTitulo()"></h2>
+          <p class="text-sm text-slate-500 mb-6 max-w-xs leading-relaxed" x-text="paywallDesc()"></p>
 
           <!-- Cards de plano compactos -->
           <div class="w-full max-w-sm space-y-3 text-left">
@@ -286,7 +284,10 @@
         </div>
       </div>
 
-      <!-- ── Leituras do Dia ──────────────────────────────────── -->
+        </div><!-- /prayers section -->
+      </template><!-- /x-if !trialExpirado -->
+
+      <!-- ── Leituras do Dia — sempre visível (trial ativo, expirado ou pago vencido) ── -->
       <div x-show="liturgia.data || liturgiaLoading" class="mt-7">
 
         <!-- Cabeçalho -->
@@ -391,8 +392,6 @@
         </template>
       </div>
 
-        </div><!-- /template !trialExpirado content -->
-      </template><!-- /x-if !trialExpirado -->
     </div>
 
     <!-- ── REFLEXÃO (Plus) ──────────────────────────────────── -->
@@ -994,12 +993,25 @@ function app(){
     },
 
     trialExpirado(){
-      const p = this.usuario?.plano;
-      const isFree = (p === 'free' || p === 'gratuito' || !p);
-      if(!isFree) return false; // pago → nunca bloqueia
       const trialEnd = this.usuario?.trial_end;
       if(!trialEnd) return false; // sem data → não bloqueia (precaução)
       return new Date(trialEnd) < new Date();
+    },
+
+    paywallTitulo(){
+      const p = this.usuario?.plano;
+      const isFree = !p || p === 'free' || p === 'gratuito';
+      return isFree
+        ? 'Seus 7 dias gratuitos chegaram ao fim 🙏'
+        : 'Sua assinatura mensal venceu 🙏';
+    },
+
+    paywallDesc(){
+      const p = this.usuario?.plano;
+      const isFree = !p || p === 'free' || p === 'gratuito';
+      return isFree
+        ? 'Suas orações diárias estão esperando por você. Escolha um plano para continuar recebendo todo dia às 6h.'
+        : 'Renove sua assinatura para continuar recebendo orações todo dia às 6h. Seu histórico está preservado! 🙏';
     },
 
     planLabel(){
